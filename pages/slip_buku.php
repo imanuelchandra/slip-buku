@@ -187,7 +187,7 @@ if (isset($_GET['action']) AND $_GET['action'] == 'print') {
 	$bookslip_cut_title = 36; // banyak nya karakter yang tercetak pada judul buku. ubah 0 jika nama tidak terpotong
 	$bookslip_cut_authors = 36; // banyak nya karakter yang tercetak pada nama pengarang buku. ubah 0 jika nama tidak terpotong
 	$bookslip_fonts = "Arial, Verdana, Helvetica, 'Trebuchet MS'"; // font yang digunakan
-	$bookslip_number_row = 15; // jumlah baris kosong pada slip buku
+	$bookslip_number_row = 20; // jumlah baris kosong pada slip buku
 
 	// chunk book card array
 	$chunked_book_card_arrays = array_chunk($item_data_array, $bookslip_items_per_row);
