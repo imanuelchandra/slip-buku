@@ -18,36 +18,6 @@
  *
  */
 
- /* This source modified by Muh Tarom (stuqly@gmail.com) on Friday, 21 December 2012 ( SLiMS 5 Cendana )/
- /* Disesuaikan Pada tanggal 28 September , untuk SLiMS 7 Cendana oleh Zaemakhrus /
-
-/* Cetak Kartu Buku */
-/* Tutorial Baca Di slimskudus.blogspot.com */
-
-// key to authenticate
-//define('INDEX_AUTH', '1');
-
-// main system configuration
-// require '../../../sysconfig.inc.php';
-// // IP based access limitation
-// require LIB.'ip_based_access.inc.php';
-// do_checkIP('smc');
-// do_checkIP('smc-bibliography');
-// // start the session
-// require SB.'admin/default/session.inc.php';
-// require SIMBIO.'simbio_GUI/table/simbio_table.inc.php';
-// require SIMBIO.'simbio_GUI/form_maker/simbio_form_table_AJAX.inc.php';
-// require SIMBIO.'simbio_GUI/paging/simbio_paging.inc.php';
-// require SIMBIO.'simbio_DB/datagrid/simbio_dbgrid.inc.php';
-// require SIMBIO.'simbio_DB/simbio_dbop.inc.php';
-
-// // privileges checking
-// $can_read = utility::havePrivilege('bibliography', 'r');
-
-// if (!$can_read) {
-// 	die('<div class="errorBox">'.__('You are not authorized to view this section').'</div>');
-// }
-
 require LIB . 'ip_based_access.inc.php';
 do_checkIP('smc');
 do_checkIP('smc-bibliography');
@@ -77,79 +47,69 @@ if (isset($_POST['itemID']) AND !empty($_POST['itemID']) AND isset($_POST['itemA
 	if (!$can_read) {
 		die();
 	}
+	
 	if (!is_array($_POST['itemID'])) {
 		// make an array
 		$_POST['itemID'] = array((integer)$_POST['itemID']);
 	}
+
 	// loop array
-	if (isset($_SESSION['bookcards'])) {
-		$print_count = count($_SESSION['bookcards']);
+	if (isset($_SESSION['bookslip'])) {
+		$print_count = count($_SESSION['bookslip']);
 	} else {
 		$print_count = 0;
 	}
-	// barcode size
-	$size = 2;
-	// create AJAX request
-	echo '<script type="text/javascript" src="'.JWB.'jquery.js"></script>';
-	echo '<script type="text/javascript">';
+
 	// loop array
 	foreach ($_POST['itemID'] as $itemID) {
 		if ($print_count == $max_print) {
 			$limit_reach = true;
 			break;
 		}
-		if (isset($_SESSION['bookcards'][$itemID])) {
+
+		if (isset($_SESSION['bookslip'][$itemID])) {
 			continue;
 		}
-		if (!empty($itemID)) {
-			$barcode_text = trim($itemID);
-			/* replace space */
-			$barcode_text = str_replace(array(' ', '/', '\/'), '_', $barcode_text);
-			/* replace invalid characters */
-			$barcode_text = str_replace(array(':', ',', '*', '@'), '', $barcode_text);
-			// send ajax request
-			echo 'jQuery.ajax({ url: \''.SWB.'lib/phpbarcode/barcode.php?code='.$itemID.'&encoding='.$sysconf['barcode_encoding'].'&scale='.$size.'&mode=png\', type: \'GET\', error: function() { alert(\'Error creating barcode!\'); } });'."\n";
-			// add to sessions
-			$_SESSION['bookcards'][$itemID] = $itemID;
-			$print_count++;
-		}
+
+		$_SESSION['bookslip'][$itemID] = $itemID;
+        $print_count++;
 	}
-	echo 'top.$(\'#queueCount\').html(\''.$print_count.'\')';
-	echo '</script>';
+	
 	// update print queue count object
-	sleep(2);
 	if (isset($limit_reach)) {
-		$msg = str_replace('{max_print}', $max_print, __('Selected items NOT ADDED to print queue. Only {max_print} can be printed at once'));
-		utility::jsAlert($msg);
-	} else {
-	  utility::jsAlert(__('Selected items added to print queue'));
-	}
-	exit();
+        $msg = str_replace('{max_print}', $max_print, __('Selected items NOT ADDED to print queue. Only {max_print} can be printed at once')); //mfc
+        utility::jsToastr(__('Print Catalog Format'), $msg, 'warning');
+    } else {
+        // update print queue count object
+        echo '<script type="text/javascript">parent.$(\'#queueCount\').html(\'' . $print_count . '\');</script>';
+        utility::jsToastr(__('Print Catalog Format'), __('Selected items added to print queue'), 'success');
+    }
+    exit();
 }
 
 // clean print queue
 if (isset($_GET['action']) AND $_GET['action'] == 'clear') {
     utility::jsAlert(__('Print queue cleared!'));
     echo '<script type="text/javascript">top.$(\'#queueCount\').html(\'0\');</script>';
-    unset($_SESSION['labels']);
+    unset($_SESSION['bookslip']);
     exit();
 }
 
 // barcode pdf download
 if (isset($_GET['action']) AND $_GET['action'] == 'print') {
 	// check if label session array is available
-	if (!isset($_SESSION['bookcards'])) {
+	if (!isset($_SESSION['bookslip'])) {
 		utility::jsAlert(__('There is no data to print!'));
 		die();
 	}
-	if (count($_SESSION['bookcards']) < 1) {
+	if (count($_SESSION['bookslip']) < 1) {
 		utility::jsAlert(__('There is no data to print!'));
 		die();
 	}
 
 	// concat all ID together
 	$item_ids = '';
-	foreach ($_SESSION['bookcards'] as $id) {
+	foreach ($_SESSION['bookslip'] as $id) {
 		$item_ids .= '\''.$id.'\',';
 	}
 	// strip the last comma
@@ -192,7 +152,7 @@ if (isset($_GET['action']) AND $_GET['action'] == 'print') {
 	// chunk book card array
 	$chunked_book_card_arrays = array_chunk($item_data_array, $bookslip_items_per_row);
 	// create html ouput
-	$html_str .= '<!DOCTYPE html>'."\n";
+	$html_str = '<!DOCTYPE html>'."\n";
 	$html_str .= '<!-- Contributed(@)2012 Muh Tarom (stuqly@gmail.com) -->'."\n";
 	$html_str .= '<html lang="en">'."\n";
 	$html_str .= '<head>'."\n";
@@ -204,7 +164,8 @@ if (isset($_GET['action']) AND $_GET['action'] == 'print') {
 	$html_str .= '<script type="text/javascript" src="../js/jquery.js"></script>'."\n";
 	$html_str .= '<style type="text/css">'."\n";
 	$html_str .= 'body { background: #ffffff; color: #000000; font-family: '.$bookslip_fonts.'; font-size: 9pt; margin: 1cm; padding: 0px; }'."\n";
-	$html_str .= '.bookcard { min-height: '.$bookslip_height.'; width: '.$bookslip_width.'; margin: 0.5cm; }'."\n";
+	$html_str .= '.bookslip { min-height: '.$bookslip_height.'; width: '.$bookslip_width.'; margin: 0.5cm; }'."\n";
+	$html_str .= '.booksliplabel { border-bottom: #000000 2px solid; font-size: 10pt; font-weight: bold; margin: 0px; padding: 0px 0px 5px 0px; text-align: center; width: 100%; }'."\n";
 	$html_str .= '.libname { border-bottom: #000000 2px solid; font-size: 10pt; font-weight: bold; margin: 0px; padding: 0px 0px 5px 0px; text-align: center; width: 100%; }'."\n";
 	$html_str .= '</style>'."\n";
 	$html_str .= '</head>'."\n";
@@ -216,8 +177,8 @@ if (isset($_GET['action']) AND $_GET['action'] == 'print') {
 		$html_str .= '<tr>'."\n";
 		foreach ($bookslip_rows as $bookslip) {
 			$html_str .= '<td valign="top">'."\n";
-				$html_str .= '<div class="bookcard">'."\n";
-				if ($bookslip_include_header_text) { $html_str .= '<div class="libname">'.($bookslip_header_text?$bookslip_header_text:$sysconf['library_name']).'<br />'.($bookslip_address_text).'</div>'."\n";}
+				$html_str .= '<div class="bookslip">'."\n";
+				$html_str .= '<div class="booksliplabel">SLIP BUKU</div>'."\n";
 				$html_str .= '<table style="margin: 5px 0px 0px 0px; padding: 0; width: 8.6cm;" cellspacing="0" cellpadding="0">'."\n";
 				$html_str .= '<tr>'."\n";
 				$html_str .= '<td valign="top" style="margin: 0; width: 80px;">No. Eksemplar</td>'."\n";
@@ -284,7 +245,7 @@ if (isset($_GET['action']) AND $_GET['action'] == 'print') {
 	$html_str .= '</body>'."\n";
 	$html_str .= '</html>'."\n";
 	// unset the session
-	unset($_SESSION['bookcards']);
+	unset($_SESSION['bookslip']);
 	// write to file
 	$print_file_name = 'bookcard_gen_print_result_'.strtolower(str_replace(' ', '_', $_SESSION['uname'])).'.html';
 	$file_write = @file_put_contents(UPLOAD.$print_file_name, $html_str);
@@ -319,8 +280,8 @@ if (isset($_GET['action']) AND $_GET['action'] == 'print') {
 	<div class="infoBox">
 	<?php
 	echo __('Maximum').' <font style="color: #f00">'.$max_print.'</font> '.__('records can be printed at once. Currently there is').' ';
-	if (isset($_SESSION['bookcards'])) {
-		echo '<font id="queueCount" style="color: #f00">'.count($_SESSION['bookcards']).'</font>';
+	if (isset($_SESSION['bookslip'])) {
+		echo '<font id="queueCount" style="color: #f00">'.count($_SESSION['bookslip']).'</font>';
 	} else { echo '<font id="queueCount" style="color: #f00">0</font>'; }
 	echo ' '.__('in queue waiting to be printed.');
 	?>
